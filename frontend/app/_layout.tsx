@@ -15,7 +15,7 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -45,6 +45,18 @@ export default function RootLayout() {
           options={{ 
             headerShown: false,
             presentation: 'modal'
+          }} 
+        />
+        <Stack.Screen 
+          name="auth/login" 
+          options={{ 
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="auth/register" 
+          options={{ 
+            headerShown: false,
           }} 
         />
         <Stack.Screen 
@@ -89,7 +101,14 @@ export default function RootLayout() {
             headerTitle: 'Discounts',
           }} 
         />
+        <Stack.Screen 
+          name="admin/settings" 
+          options={{ 
+            headerShown: true,
+            headerTitle: 'Site Settings',
+          }} 
+        />
       </Stack>
-    </>
+    </SafeAreaProvider>
   );
 }
