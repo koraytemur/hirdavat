@@ -223,6 +223,16 @@ export default function AdminProductsScreen() {
 
   const renderProduct = ({ item }: { item: Product }) => (
     <View style={styles.productCard}>
+      {/* Product Thumbnail */}
+      <View style={styles.productThumbnail}>
+        {item.images && item.images.length > 0 ? (
+          <Image source={{ uri: item.images[0] }} style={styles.thumbnailImage} />
+        ) : (
+          <View style={styles.thumbnailPlaceholder}>
+            <Ionicons name="cube-outline" size={24} color="#ccc" />
+          </View>
+        )}
+      </View>
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{getLocalizedText(item.name)}</Text>
         <Text style={styles.productSku}>SKU: {item.sku}</Text>
