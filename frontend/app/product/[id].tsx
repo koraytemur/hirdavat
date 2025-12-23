@@ -8,8 +8,9 @@ import {
   Image,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useStore } from '../../src/store/useStore';
@@ -22,10 +23,14 @@ export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t, getLocalizedText, addToCart } = useStore();
+  const insets = useSafeAreaInsets();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  
+  // Extra padding for bottom navigation area
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 24 : 0);
 
   useEffect(() => {
     loadProduct();
