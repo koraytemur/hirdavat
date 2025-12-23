@@ -133,6 +133,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2c3e50',
   },
+  vatIncluded: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
+  },
   addButton: {
     backgroundColor: '#e67e22',
     width: 36,
