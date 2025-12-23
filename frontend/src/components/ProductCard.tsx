@@ -4,6 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Product } from '../types';
 import { useStore } from '../store/useStore';
 
+// Belgium VAT rate
+const VAT_RATE = 0.21;
+
 interface ProductCardProps {
   product: Product;
   onPress: () => void;
@@ -11,6 +14,9 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) => {
   const { getLocalizedText, t, addToCart } = useStore();
+
+  // Calculate price with VAT included
+  const priceWithVat = product.price * (1 + VAT_RATE);
 
   const handleAddToCart = (e: any) => {
     e.stopPropagation();
@@ -43,7 +49,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
           {getLocalizedText(product.name)}
         </Text>
         <View style={styles.footer}>
-          <Text style={styles.price}>€{product.price.toFixed(2)}</Text>
+          <View>
+            <Text style={styles.price}>€{priceWithVat.toFixed(2)}</Text>
+            <Text style={styles.vatIncluded}>BTW inbegrepen</Text>
+          </View>
           {product.stock > 0 && (
             <TouchableOpacity
               style={styles.addButton}
