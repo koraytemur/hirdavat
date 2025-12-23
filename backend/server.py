@@ -316,6 +316,199 @@ class DashboardStats(BaseModel):
     recent_orders: List[dict] = []
     top_products: List[dict] = []
 
+# ==================== AUTH ENDPOINTS ====================
+
+@api_router.post("/auth/register")
+async def register(user_data: UserRegister):
+    # Check if email already exists
+    existing = await db.users.find_one({"email": user_data.email.lower()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create user
+    user = User(
+        email=user_data.email.lower(),
+        name=user_data.name,
+        phone=user_data.phone,
+        role="user"
+    )
+    user_dict = user.dict()
+    user_dict["password_hash"] = get_password_hash(user_data.password)
+    
+    await db.users.insert_one(user_dict)
+    
+    # Create access token
+    access_token = create_access_token(
+        data={"sub": user.id},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role
+        }
+    }
+
+@api_router.post("/auth/login")
+async def login(credentials: UserLogin):
+    user = await db.users.find_one({"email": credentials.email.lower()})
+    if not user or not verify_password(credentials.password, user.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    if not user.get("is_active", True):
+        raise HTTPException(status_code=401, detail="Account is disabled")
+    
+    # Create access token
+    access_token = create_access_token(
+        data={"sub": user["id"]},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "role": user.get("role", "user")
+        }
+    }
+
+@api_router.get("/auth/me")
+async def get_me(user = Depends(require_auth)):
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "name": user["name"],
+        "phone": user.get("phone", ""),
+        "address": user.get("address", ""),
+        "city": user.get("city", ""),
+        "postal_code": user.get("postal_code", ""),
+        "role": user.get("role", "user")
+    }
+
+@api_router.put("/auth/profile")
+async def update_profile(profile: UserUpdate, user = Depends(require_auth)):
+    update_data = {k: v for k, v in profile.dict().items() if v is not None}
+    if update_data:
+        await db.users.update_one({"id": user["id"]}, {"$set": update_data})
+    updated_user = await db.users.find_one({"id": user["id"]})
+    return {
+        "id": updated_user["id"],
+        "email": updated_user["email"],
+        "name": updated_user["name"],
+        "phone": updated_user.get("phone", ""),
+        "address": updated_user.get("address", ""),
+        "city": updated_user.get("city", ""),
+        "postal_code": updated_user.get("postal_code", ""),
+        "role": updated_user.get("role", "user")
+    }
+
+# ==================== SITE SETTINGS ENDPOINTS ====================
+
+@api_router.get("/settings")
+async def get_site_settings():
+    settings = await db.settings.find_one({"id": "site_settings"})
+    if not settings:
+        # Return default settings
+        default = SiteSettings()
+        return default.dict()
+    return settings
+
+@api_router.put("/settings")
+async def update_site_settings(settings: SiteSettingsUpdate, user = Depends(require_superadmin)):
+    update_data = {k: v for k, v in settings.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    existing = await db.settings.find_one({"id": "site_settings"})
+    if existing:
+        await db.settings.update_one({"id": "site_settings"}, {"$set": update_data})
+    else:
+        new_settings = SiteSettings(**update_data)
+        await db.settings.insert_one(new_settings.dict())
+    
+    return await db.settings.find_one({"id": "site_settings"})
+
+# ==================== BULK EMAIL ENDPOINT ====================
+
+@api_router.post("/admin/send-email")
+async def send_bulk_email(email_request: BulkEmailRequest, user = Depends(require_admin)):
+    # Get all users
+    query = {"is_active": True} if email_request.send_to == "active" else {}
+    users = await db.users.find(query).to_list(1000)
+    
+    # In production, integrate with real email service (SendGrid, SES, etc.)
+    # For now, we'll log the emails and store them in DB
+    
+    email_log = {
+        "id": str_id(),
+        "subject": email_request.subject,
+        "message": email_request.message,
+        "sent_by": user["id"],
+        "sent_to_count": len(users),
+        "recipients": [u["email"] for u in users],
+        "status": "sent",  # In production: pending -> processing -> sent/failed
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.email_logs.insert_one(email_log)
+    
+    # TODO: Integrate with real email service
+    # Example with SendGrid:
+    # for user in users:
+    #     send_email(user["email"], email_request.subject, email_request.message)
+    
+    return {
+        "success": True,
+        "message": f"Email queued for {len(users)} recipients",
+        "recipients_count": len(users)
+    }
+
+@api_router.get("/admin/email-logs")
+async def get_email_logs(user = Depends(require_admin)):
+    logs = await db.email_logs.find().sort("created_at", -1).limit(50).to_list(50)
+    return logs
+
+# ==================== USER MANAGEMENT (ADMIN) ====================
+
+@api_router.get("/admin/users")
+async def get_all_users(user = Depends(require_admin)):
+    users = await db.users.find().sort("created_at", -1).to_list(500)
+    return [{
+        "id": u["id"],
+        "email": u["email"],
+        "name": u["name"],
+        "role": u.get("role", "user"),
+        "is_active": u.get("is_active", True),
+        "created_at": u.get("created_at")
+    } for u in users]
+
+@api_router.patch("/admin/users/{user_id}/role")
+async def update_user_role(user_id: str, role: str, admin = Depends(require_superadmin)):
+    if role not in ["user", "admin", "superadmin"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    result = await db.users.update_one({"id": user_id}, {"$set": {"role": role}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": f"User role updated to {role}"}
+
+@api_router.patch("/admin/users/{user_id}/status")
+async def toggle_user_status(user_id: str, admin = Depends(require_admin)):
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_status = not user.get("is_active", True)
+    await db.users.update_one({"id": user_id}, {"$set": {"is_active": new_status}})
+    return {"message": f"User {'activated' if new_status else 'deactivated'}"}
+
 # ==================== CATEGORY ENDPOINTS ====================
 
 @api_router.get("/categories", response_model=List[Category])
@@ -332,11 +525,12 @@ async def get_category(category_id: str):
     return Category(**{**category, "id": category.get("id")})
 
 @api_router.post("/categories", response_model=Category)
-async def create_category(category: CategoryCreate):
+async def create_category(category: CategoryCreate, user = Depends(require_admin)):
     category_dict = category.dict()
     category_obj = Category(**category_dict)
     await db.categories.insert_one(category_obj.dict())
     return category_obj
+
 
 @api_router.put("/categories/{category_id}", response_model=Category)
 async def update_category(category_id: str, category: CategoryCreate):
