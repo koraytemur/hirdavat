@@ -266,6 +266,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2c3e50',
   },
+  vatText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
   stockBadge: {
     flexDirection: 'row',
     alignItems: 'center',
