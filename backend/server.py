@@ -192,14 +192,14 @@ class DashboardStats(BaseModel):
 async def get_categories(active_only: bool = False):
     query = {"is_active": True} if active_only else {}
     categories = await db.categories.find(query).sort("sort_order", 1).to_list(100)
-    return [Category(**{**cat, "id": str(cat.get("_id", cat.get("id")))}) for cat in categories]
+    return [Category(**{**cat, "id": cat.get("id")}) for cat in categories]
 
 @api_router.get("/categories/{category_id}", response_model=Category)
 async def get_category(category_id: str):
     category = await db.categories.find_one({"id": category_id})
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
-    return Category(**{**category, "id": str(category.get("_id", category.get("id")))})
+    return Category(**{**category, "id": category.get("id")})
 
 @api_router.post("/categories", response_model=Category)
 async def create_category(category: CategoryCreate):
