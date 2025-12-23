@@ -1201,6 +1201,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    """Ensure superadmin exists on startup"""
+    superadmin_exists = await db.users.find_one({"role": "superadmin"})
+    if not superadmin_exists:
+        superadmin = {
+            "id": str(uuid.uuid4()),
+            "email": "admin@hardwarestore.be",
+            "password_hash": get_password_hash("Admin123!"),
+            "name": "Super Admin",
+            "phone": "+32 XXX XXX XXX",
+            "role": "superadmin",
+            "is_active": True,
+            "created_at": datetime.utcnow()
+        }
+        await db.users.insert_one(superadmin)
+        logger.info("Superadmin user created: admin@hardwarestore.be")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
