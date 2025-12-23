@@ -292,6 +292,26 @@ export default function AdminProductsScreen() {
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* Product Images Section */}
+              <Text style={styles.inputLabel}>Product Images</Text>
+              <View style={styles.imagesContainer}>
+                {productImages.map((image, index) => (
+                  <View key={index} style={styles.imageWrapper}>
+                    <Image source={{ uri: image }} style={styles.productImage} />
+                    <TouchableOpacity
+                      style={styles.removeImageButton}
+                      onPress={() => removeImage(index)}
+                    >
+                      <Ionicons name="close-circle" size={24} color="#e74c3c" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <TouchableOpacity style={styles.addImageButton} onPress={showImageOptions}>
+                  <Ionicons name="camera-outline" size={32} color="#666" />
+                  <Text style={styles.addImageText}>Add Image</Text>
+                </TouchableOpacity>
+              </View>
+              
               <Text style={styles.inputLabel}>Name (EN) *</Text>
               <TextInput
                 style={styles.input}
