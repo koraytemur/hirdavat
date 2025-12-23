@@ -561,6 +561,47 @@ const styles = StyleSheet.create({
   categoryChipTextActive: {
     color: '#fff',
   },
+  // Image styles
+  imagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  imageWrapper: {
+    position: 'relative',
+    marginRight: 12,
+    marginBottom: 12,
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  addImageButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f9f9f9',
+  },
+  addImageText: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 4,
+  },
   modalFooter: {
     paddingVertical: 20,
   },
